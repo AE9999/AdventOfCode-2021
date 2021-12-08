@@ -31,13 +31,13 @@ impl InputLine {
         let one_chars: Vec<char> = one.iter().map(|x|x.clone()).collect();
         if !one_chars.len() == 2 { panic!("Wrong assumption") }
         if d_c_e.contains(&one_chars[0]) {
-            solution.insert(one_chars[0], 'c');
-            solution.insert(one_chars[1], 'f');
+            solution.insert(one_chars[1], 'c');
+            solution.insert(one_chars[0], 'f');
             println!("{:?} -> c", one_chars[0]);
             println!("{:?} -> f", one_chars[1]);
         } else {
-            solution.insert(one_chars[1], 'c');
-            solution.insert(one_chars[0], 'f');
+            solution.insert(one_chars[0], 'c');
+            solution.insert(one_chars[1], 'f');
             println!("{:?} -> c", one_chars[1]);
             println!("{:?} -> f", one_chars[0]);
         }
