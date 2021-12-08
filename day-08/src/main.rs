@@ -9,7 +9,23 @@ struct InputLine {
 }
 
 impl InputLine {
-    fn decode(&self)  {
+
+    fn recalculate(&self) -> HashMap<&str, char> {
+        let mut rvalue : HashMap<&str, char> = HashMap::new();
+        rvalue.insert("abcefg", '0');
+        rvalue.insert("cf" , '1');
+        rvalue.insert("acdeg", '2');
+        rvalue.insert("acdfg" , '3');
+        rvalue.insert("bcdf", '4');
+        rvalue.insert("abdfg", '5');
+        rvalue.insert("abdefg", '6');
+        rvalue.insert("acf", '7');
+        rvalue.insert("abcdefg", '8');
+        rvalue.insert("abcdfg", '9');
+        return rvalue;
+    }
+
+    fn decode(&self) -> i32 {
         let mut solution:  HashMap<char, char> = HashMap::new();
 
         let one:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 2).unwrap().chars());
@@ -18,7 +34,6 @@ impl InputLine {
         let a_value =  seven.difference(&one).next().unwrap();
         solution.insert(*a_value, 'a');
         println!("{:?} -> a", *a_value);
-        //println!("{:?}", solution);
 
         let eight: HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 7).unwrap().chars());
         let missing_one_values: Vec<HashSet<char>> = self.input.iter()
@@ -31,13 +46,13 @@ impl InputLine {
         let one_chars: Vec<char> = one.iter().map(|x|x.clone()).collect();
         if !one_chars.len() == 2 { panic!("Wrong assumption") }
         if d_c_e.contains(&one_chars[0]) {
-            solution.insert(one_chars[1], 'c');
-            solution.insert(one_chars[0], 'f');
+            solution.insert(one_chars[0], 'c');
+            solution.insert(one_chars[1], 'f');
             println!("{:?} -> c", one_chars[0]);
             println!("{:?} -> f", one_chars[1]);
         } else {
-            solution.insert(one_chars[0], 'c');
-            solution.insert(one_chars[1], 'f');
+            solution.insert(one_chars[1], 'c');
+            solution.insert(one_chars[0], 'f');
             println!("{:?} -> c", one_chars[1]);
             println!("{:?} -> f", one_chars[0]);
         }
@@ -46,7 +61,7 @@ impl InputLine {
         let four:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 4).unwrap().chars());
         let mut four_and_seven:HashSet<char>  = seven.to_owned();
         four_and_seven.extend(four);
-        if !four_and_seven.len() == 6 { panic!("Wrong assumption") }
+        if four_and_seven.len() != 5 { panic!("Wrong assumption") }
         let nine: Vec<String> = self.input.iter()
                                             .filter(|x| {
                                                 let chars = HashSet::from_iter(x.chars());
@@ -60,16 +75,16 @@ impl InputLine {
         println!("{:?} -> g", g_char);
         solution.insert(g_char, 'g'); // Goed till here
 
-        let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone()));
-        let current_keys: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
-        let three: Vec<char> = self.input.iter().filter(|x| {
+        let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
+        let three: Vec<char> = self.input.iter().filter(|x| x.len() == 5)
+                                                .filter(|x| {
             let set : HashSet<char> = HashSet::from_iter(x.chars().map(|x|x.clone()));
             let intersection: HashSet<char>  = set.intersection(&current_values).map(|x|x.clone()).collect();
             let diff: HashSet<char> = set.difference(&current_values).map(|x|x.clone()).collect();
             intersection.len() == current_values.len() && diff.len() == 1
         }).map(|x|{
             let set : HashSet<char> = HashSet::from_iter(x.chars().map(|c|c.clone()));
-            let diff : HashSet<char> = set.difference(&current_keys).map(|c|c.clone()).collect();
+            let diff : HashSet<char> = set.difference(&current_values).map(|c|c.clone()).collect();
             diff.iter().next().unwrap().clone()
         }) .collect();
         if three.len() != 1 { panic!("Wrong assumption") }
@@ -78,7 +93,48 @@ impl InputLine {
         solution.insert(d_char, 'd');
 
 
-        println!("I'm DECOOODING {:?}", solution.len())
+        let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
+        // println!("{:?} -> current values", current_values);
+        // let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone())); // This fails why??
+        let nine: Vec<char>  = self.input.iter().filter(|x|x.len() == 6)
+            .filter(|x| {
+                let set : HashSet<char> = HashSet::from_iter(x.chars().map(|x|x.clone()));
+                let intersection: HashSet<char>  = set.intersection(&current_values).map(|x|x.clone()).collect();
+                let diff: HashSet<char> = set.difference(&current_values).map(|x|x.clone()).collect();
+                intersection.len() == current_values.len() && diff.len() == 1
+            }).map(|x|{
+            let set : HashSet<char> = HashSet::from_iter(x.chars().map(|c|c.clone()));
+            let diff : HashSet<char> = set.difference(&current_values).map(|c|c.clone()).collect();
+            diff.iter().next().unwrap().clone()
+        }) .collect();
+        if nine.len() != 1 { panic!("Wrong assumption") }
+        let b_char = *nine.iter().next().unwrap();
+        println!("{:?} -> b", b_char);
+        solution.insert(b_char, 'b');
+
+        let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
+        // println!("{:?} -> current values", current_values);
+        let eight: Vec<char>  = self.input.iter().filter(|x|x.len() == 7).map(|x|{
+            let set : HashSet<char> = HashSet::from_iter(x.chars().map(|c|c.clone()));
+            let diff : HashSet<char> = set.difference(&current_values).map(|c|c.clone()).collect();
+            diff.iter().next().unwrap().clone()
+        }) .collect();
+        if eight.len() != 1 { panic!("Wrong assumption") }
+        let e_char = *eight.iter().next().unwrap();
+        println!("{:?} -> e", e_char);
+        solution.insert(e_char, 'e');
+
+
+        let parsed: String = self.output.iter().map(|x| {
+            let mut key : Vec<char> = x.chars().map(|key|*solution.get(&key).unwrap()).collect();
+            println!("Reading A) {:?} => key {:?}", x,  key);
+            key.sort();
+            let key: String = key.into_iter().collect();
+            println!("Reading B) {:?} => key {:?}", x,  key);
+            self.recalculate().get(key.as_str()).unwrap().clone()
+        }).collect();
+
+        parsed.parse::<i32>().unwrap()
     }
 }
 
@@ -90,7 +146,8 @@ fn main() -> io::Result<()> {
         line.output.iter().map(|x|encodes1_4_7_or_8(x)).fold(0, |acc, x| acc +x)
     ).fold(0, |acc, x| acc +x);
     println!("{:?} Is the amount of times digits 1, 4, 7, or 8 appear in the output", answer);
-    input_lines.iter().for_each(|x|x.decode());
+    let answer = input_lines.iter().fold(0,  |acc, x|acc + x.decode());
+    println!("{:} is the answer you get if you add up all of the output values", answer);
     Ok(())
 }
 
