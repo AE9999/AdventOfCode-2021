@@ -17,7 +17,8 @@ impl InputLine {
 
         let a_value =  seven.difference(&one).next().unwrap();
         solution.insert(*a_value, 'a');
-        println!("{:?}", solution);
+        println!("{:?} -> a", *a_value);
+        //println!("{:?}", solution);
 
         let eight: HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 7).unwrap().chars());
         let missing_one_values: Vec<HashSet<char>> = self.input.iter()
@@ -32,11 +33,15 @@ impl InputLine {
         if d_c_e.contains(&one_chars[0]) {
             solution.insert(one_chars[0], 'c');
             solution.insert(one_chars[1], 'f');
+            println!("{:?} -> c", one_chars[0]);
+            println!("{:?} -> f", one_chars[1]);
         } else {
             solution.insert(one_chars[1], 'c');
             solution.insert(one_chars[0], 'f');
+            println!("{:?} -> c", one_chars[1]);
+            println!("{:?} -> f", one_chars[0]);
         }
-        println!("{:?}", solution);
+        //println!("{:?}", solution);
 
         let four:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 4).unwrap().chars());
         let mut four_and_seven:HashSet<char>  = seven.to_owned();
@@ -50,31 +55,30 @@ impl InputLine {
                                             } ).map(|x| x.clone()).collect();
         if !nine.len() == 1 { panic!("Wrong assumption") }
         let nine_chars = HashSet::from_iter(nine[0].chars());
-        let g_char : HashSet<char> = nine_chars.difference(&four_and_seven).map(|x|x.clone()).collect();
-        solution.insert(*g_char.iter().next().unwrap(), 'g');
-        println!("{:?}", solution); // Goed till here
+        let g_set : HashSet<char> = nine_chars.difference(&four_and_seven).map(|x|x.clone()).collect();
+        let g_char = *(g_set.iter().next().unwrap());
+        println!("{:?} -> g", g_char);
+        solution.insert(g_char, 'g'); // Goed till here
 
-        let three:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 5).unwrap().chars());
-        let current_sollution: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone()));
-        let d_char: HashSet<char> =  three.difference(&current_sollution).map(|x|x.clone()).collect();
-        if !d_char.len() == 1 { panic!("Wrong assumption") }
-        solution.insert(*d_char.iter().next().unwrap(), 'd');
-        println!("{:?}", solution);
-
-        /*let current_sollution: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone()));
-        let nine: Vec<char> = self.input.iter().filter(|x| {
+        let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone()));
+        let current_keys: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
+        let three: Vec<char> = self.input.iter().filter(|x| {
             let set : HashSet<char> = HashSet::from_iter(x.chars().map(|x|x.clone()));
-            let intersection: HashSet<char>  = set.intersection(&current_sollution).map(|x|x.clone()).collect();
-            let diff: HashSet<char> = set.difference(&current_sollution).map(|x|x.clone()).collect();
-            intersection.len() == current_sollution.len() && diff.len() == 1
+            let intersection: HashSet<char>  = set.intersection(&current_values).map(|x|x.clone()).collect();
+            let diff: HashSet<char> = set.difference(&current_values).map(|x|x.clone()).collect();
+            intersection.len() == current_values.len() && diff.len() == 1
         }).map(|x|{
-            let set : HashSet<char> = HashSet::from_iter(x.chars().map(|x|x.clone()));
-            set.iter().next().unwrap().clone()
+            let set : HashSet<char> = HashSet::from_iter(x.chars().map(|c|c.clone()));
+            let diff : HashSet<char> = set.difference(&current_keys).map(|c|c.clone()).collect();
+            diff.iter().next().unwrap().clone()
         }) .collect();
-        if nine.len() != 1 { panic!("Wrong assumption") }
-        solution.insert(*nine.iter().next().unwrap(), 'b');
-        println!("{:?}", solution);
-        println!("I'm DECOOODING {:?}", solution.len())*/
+        if three.len() != 1 { panic!("Wrong assumption") }
+        let d_char = *three.iter().next().unwrap();
+        println!("{:?} -> d", d_char);
+        solution.insert(d_char, 'd');
+
+
+        println!("I'm DECOOODING {:?}", solution.len())
     }
 }
 
