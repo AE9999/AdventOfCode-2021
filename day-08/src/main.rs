@@ -31,32 +31,27 @@ impl InputLine {
         let one:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 2).unwrap().chars());
         let seven:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 3).unwrap().chars());
 
-        let a_value =  seven.difference(&one).next().unwrap();
-        solution.insert(*a_value, 'a');
-        println!("{:?} -> a", *a_value);
+        let d: Vec<char> = seven.difference(&one).map(|x|x.clone()).collect();
+        if d.len() != 1 { panic!("Wrong assumption") }
+        let a_value =  d[0];
+        solution.insert(a_value, 'a');
 
         let eight: HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 7).unwrap().chars());
         let missing_one_values: Vec<HashSet<char>> = self.input.iter()
-                                                         .find(|x|x.len() == 6)
-                                                         .iter()
+                                                         .filter(|x|x.len() == 6)
                                                          .map(|x|HashSet::from_iter(x.chars()))
                                                          .collect();
         let d_c_e: HashSet<char> = HashSet::from_iter(missing_one_values.iter()
                                                       .map(|x| *(eight.difference(x).next().unwrap() ) ));
         let one_chars: Vec<char> = one.iter().map(|x|x.clone()).collect();
-        if !one_chars.len() == 2 { panic!("Wrong assumption") }
+        if one_chars.len() != 2 { panic!("Wrong assumption") } // This seems to be random and prone to error ..
         if d_c_e.contains(&one_chars[0]) {
             solution.insert(one_chars[0], 'c');
             solution.insert(one_chars[1], 'f');
-            println!("{:?} -> c", one_chars[0]);
-            println!("{:?} -> f", one_chars[1]);
         } else {
             solution.insert(one_chars[1], 'c');
             solution.insert(one_chars[0], 'f');
-            println!("{:?} -> c", one_chars[1]);
-            println!("{:?} -> f", one_chars[0]);
         }
-        //println!("{:?}", solution);
 
         let four:HashSet<char> = HashSet::from_iter( self.input.iter().find(|x|x.len() == 4).unwrap().chars());
         let mut four_and_seven:HashSet<char>  = seven.to_owned();
@@ -72,7 +67,6 @@ impl InputLine {
         let nine_chars = HashSet::from_iter(nine[0].chars());
         let g_set : HashSet<char> = nine_chars.difference(&four_and_seven).map(|x|x.clone()).collect();
         let g_char = *(g_set.iter().next().unwrap());
-        println!("{:?} -> g", g_char);
         solution.insert(g_char, 'g'); // Goed till here
 
         let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
@@ -89,13 +83,10 @@ impl InputLine {
         }) .collect();
         if three.len() != 1 { panic!("Wrong assumption") }
         let d_char = *three.iter().next().unwrap();
-        println!("{:?} -> d", d_char);
         solution.insert(d_char, 'd');
 
 
         let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
-        // println!("{:?} -> current values", current_values);
-        // let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(_k,v)|v.clone())); // This fails why??
         let nine: Vec<char>  = self.input.iter().filter(|x|x.len() == 6)
             .filter(|x| {
                 let set : HashSet<char> = HashSet::from_iter(x.chars().map(|x|x.clone()));
@@ -109,11 +100,9 @@ impl InputLine {
         }) .collect();
         if nine.len() != 1 { panic!("Wrong assumption") }
         let b_char = *nine.iter().next().unwrap();
-        println!("{:?} -> b", b_char);
         solution.insert(b_char, 'b');
 
         let current_values: HashSet<char> = HashSet::from_iter(solution.iter().map(|(k,_v)|k.clone()));
-        // println!("{:?} -> current values", current_values);
         let eight: Vec<char>  = self.input.iter().filter(|x|x.len() == 7).map(|x|{
             let set : HashSet<char> = HashSet::from_iter(x.chars().map(|c|c.clone()));
             let diff : HashSet<char> = set.difference(&current_values).map(|c|c.clone()).collect();
@@ -121,16 +110,12 @@ impl InputLine {
         }) .collect();
         if eight.len() != 1 { panic!("Wrong assumption") }
         let e_char = *eight.iter().next().unwrap();
-        println!("{:?} -> e", e_char);
         solution.insert(e_char, 'e');
-
 
         let parsed: String = self.output.iter().map(|x| {
             let mut key : Vec<char> = x.chars().map(|key|*solution.get(&key).unwrap()).collect();
-            println!("Reading A) {:?} => key {:?}", x,  key);
             key.sort();
             let key: String = key.into_iter().collect();
-            println!("Reading B) {:?} => key {:?}", x,  key);
             self.recalculate().get(key.as_str()).unwrap().clone()
         }).collect();
 
