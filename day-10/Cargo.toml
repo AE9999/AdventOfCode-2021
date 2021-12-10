@@ -1,0 +1,10 @@
+[package]
+name = "day-10"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# https://riptutorial.com/rust/example/11086/lazy-static-
+
+[dependencies]
+lazy_static = "0.1.*"
