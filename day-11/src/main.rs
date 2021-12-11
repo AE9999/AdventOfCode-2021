@@ -46,30 +46,20 @@ impl Octopii {
         (0..self.height()).for_each(|y|{
             next_step.push(Vec::new());
             (0..self.width()).for_each(|x|{
-                next_step[y as usize].push(self.octopii[y as usize][x as usize] + 1)
-            })
-        });
-
-        // TODO(AE): write iterator
-        (0..self.height()).for_each(|y|{
-            (0..self.width()).for_each(|x|{
+                next_step[y as usize].push(self.octopii[y as usize][x as usize] + 1);
                 if next_step[y as usize][x as usize] > 9 { queue.push_back(Point { x, y }) }
             })
         });
 
-        let mut flashes: u32 = 0;
         while !(queue.is_empty()) {
             let head = queue.pop_front().unwrap();
             if flashed.contains(&head) { continue }
             flashed.insert(head);
-            flashes += 1;
             self.neighbours(&head).iter().for_each(|point| {
                 let x_ = point.x as usize;
                 let y_ = point.y as usize;
                 next_step[y_][x_] = next_step[y_][x_] + 1;
-                if next_step[y_][x_] > 9 {
-                    queue.push_back(*point);
-                }
+                if next_step[y_][x_] > 9 {  queue.push_back(*point); }
             })
         }
 
@@ -79,7 +69,7 @@ impl Octopii {
 
         self.octopii = next_step;
 
-        flashes
+        flashed.len() as u32
     }
 }
 
@@ -91,6 +81,7 @@ fn main() -> io::Result<()> {
     for _t in 0..100 {
         flashes += octopii.next_step();
     }
+    println!("{:?} many total flashes are there after 100 steps", flashes);
 
     let mut needed = 0;
     let mut octopii = read_lines(input).unwrap();
