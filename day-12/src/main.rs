@@ -40,6 +40,33 @@ impl Graph {
                            }).fold(0, |acc,x| acc + x)
         }
     }
+
+    fn count_distinct_paths_p2(&self,
+                               current:Node,
+                               visited: HashSet<Node>,
+                               visited_twice: Option<Node>) -> u64 {
+        if current.is_end() {
+            1
+        } else {
+            self.node2nodes.get(&current)
+                .unwrap()
+                .iter().filter(|node|
+                               (node.is_big()
+                                || !visited.contains(node)
+                                || visited_twice.is_none())
+                               && !node.is_start())
+                .map(|node_to_visit| {
+                    let mut visited = visited.clone();
+                    visited.insert(current.clone());
+                    let make_visit_twice = visited_twice.is_none()
+                                                 && !node_to_visit.is_big()
+                                                 && visited.contains(node_to_visit);
+                    let visited_twice_: Option<Node> = if make_visit_twice { Option::from(node_to_visit.clone()) }
+                                                       else { visited_twice.clone() };
+                    self.count_distinct_paths_p2(node_to_visit.clone(), visited, visited_twice_)
+                }).fold(0, |acc,x| acc + x)
+        }
+    }
 }
 
 fn main() -> io::Result<()> {
@@ -49,6 +76,10 @@ fn main() -> io::Result<()> {
     let answer = graph.count_distinct_paths(graph.node2nodes.keys().find(|x|x.is_start()).unwrap().clone(),
                                            HashSet::new());
     println!("{:?} many paths through this cave system are there that visit small caves at most once ..", answer);
+    let answer = graph.count_distinct_paths_p2(graph.node2nodes.keys().find(|x|x.is_start()).unwrap().clone(),
+                                            HashSet::new(),
+                                        None);
+    println!("{:?} many paths through this cave system are there ..", answer);
     Ok(())
 }
 
