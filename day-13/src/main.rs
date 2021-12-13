@@ -45,7 +45,7 @@ impl Origami {
     }
 
     fn print(&self) {
-        let mut output: Vec<Vec<char>> = (0..self.height()).map(|_x|vec!['.'; self.widht()]).collect();
+        let mut output: Vec<Vec<char>> = vec![vec!['.'; self.widht()]; self.height()];
         self.points.iter().for_each(|point|output[point.y as usize][point.x as usize] = '#');
         output.iter().for_each(|line| println!("{:?}", line.iter().collect::<String>()));
     }
