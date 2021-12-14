@@ -10,8 +10,8 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn read_lines(filename: &String) -> io::Result<Origami> {
+fn read_lines(filename: &String) -> io::Result<Vec<String>> {
     let file_in = File::open(filename) ?;
     let file_reader = BufReader::new(file_in);
-    return Ok(file_reader.lines().map(|x| x.unwrap()))
+    return Ok(file_reader.lines().map(|x| x.unwrap()).collect())
 }
