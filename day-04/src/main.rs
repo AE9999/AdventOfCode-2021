@@ -166,5 +166,4 @@ fn create_board(current_board : &Vec<Vec<i32>>) -> Board {
         lenght :current_board[0].len(),
         height: current_board.len()
     }
-
 }
