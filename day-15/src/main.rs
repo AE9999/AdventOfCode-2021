@@ -48,7 +48,6 @@ impl PartialOrd for State {
     }
 }
 
-
 struct RiskMap {
     points: Vec<Vec<u32>>
 }
@@ -96,7 +95,6 @@ impl RiskMap {
                     dist.insert(next.position, next.cost);
                 }
             })
-
         }
         panic!("End state should be reachable");
     }
@@ -129,7 +127,6 @@ impl RiskMap {
         } else {
             result
         }
-
     }
 
     fn calculate_risk_extended(&self) -> u32 {
@@ -158,11 +155,9 @@ impl RiskMap {
                     dist.insert(next.position, next.cost);
                 }
             })
-
         }
         panic!("End state should be reachable");
     }
-
 }
 
 fn main() -> io::Result<()> {
