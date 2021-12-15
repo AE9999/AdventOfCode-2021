@@ -8,22 +8,30 @@ use std::env;
 struct Problem {
     polymer: Vec<char>,
 
-    pair_insertion_rules: HashMap<(char, char), char>
+    pair_insertion_rules: HashMap<(char, char), char>,
+
+    calculated_pair_insertion_rules: HashMap<(char, char), HashMap<char, u64>>,
+
+    //calculated_pair_insertion_sub: HashMap<(char, char), Vec<char>>
 }
 
 impl Problem {
 
-    fn step(&mut self) {
-        println!("Step ..");
+    fn do_step(&self, input: &Vec<char>) -> Vec<char> {
         let mut next_polymer: Vec<char> = Vec::new();
-        (1..self.polymer.len()).for_each(|i| {
-            let l = self.polymer[i-1];
-            let r = self.polymer[i];
+
+        (1..input.len()).for_each(|i| {
+            let l = input[i-1];
+            let r = input[i];
             next_polymer.push(l);
             next_polymer.push(self.pair_insertion_rules.get(&(l,r) ).unwrap().clone());
         });
-        next_polymer.push(self.polymer.last().unwrap().clone());
-        self.polymer = next_polymer;
+        next_polymer.push(input.last().unwrap().clone());
+        return next_polymer
+    }
+
+    fn step(&mut self) {
+        self.polymer = self.do_step(&self.polymer);
     }
 
     fn calculate_answer(&self) -> u64 {
@@ -34,6 +42,43 @@ impl Problem {
         max - min
     }
 
+    fn calculate_pair_insertion_rules(&mut self, amount: usize) {
+
+        for (k, _v) in self.pair_insertion_rules.iter() {
+            let mut input: Vec<char> = Vec::new();
+            input.push(k.0);
+            input.push(k.1);
+            (0..amount).for_each(|_x| input = self.do_step(&input));
+            let mut map : HashMap<char, u64> = HashMap::new();
+            input[1..input.len()-1].iter().for_each(|c|{
+                *map.entry(*c).or_insert(0) += 1
+            });
+            self.calculated_pair_insertion_rules.insert(*k, map);
+        }
+    }
+
+    fn calculate_final_score(&mut self) -> u64 {
+        let mut map : HashMap<char, u64> = HashMap::new();
+
+        self.polymer.iter().for_each(|c|{
+            *map.entry(*c).or_insert(0) += 1
+        });
+        (1..self.polymer.len()).for_each(|i| {
+            let l = self.polymer[i - 1];
+            let r = self.polymer[i];
+
+
+            self.calculated_pair_insertion_rules.get(&(l,r))
+                .unwrap()
+                .iter()
+                .for_each(|(k,v)| {
+                    map.insert(*k, map.get(k).unwrap() + *v);
+                })
+        });
+        let max = map.iter().map(|(_k,v)|v).max().unwrap();
+        let min = map.iter().map(|(_k,v)|v).min().unwrap();
+        max - min
+    }
 }
 
 fn main() -> io::Result<()> {
@@ -43,7 +88,12 @@ fn main() -> io::Result<()> {
     (0..10).for_each(|_x| problem.step());
     println!("{:?} is what you get if you take the quantity of the most common element and subtract the quantity of the least common element",
             problem.calculate_answer());
-    (0..30).for_each(|_x| problem.step());
+
+    let mut problem = read_lines(input).unwrap();
+    (0..20).for_each(|_x| problem.step());
+    problem.calculate_pair_insertion_rules(20);
+    println!("{:?} is what you get if you take the quantity of the most common element and subtract the quantity of the least common element", problem.calculate_final_score());
+
     Ok(())
 }
 
@@ -67,5 +117,7 @@ fn read_lines(filename: &String) -> io::Result<Problem> {
             line.chars().for_each(|c| polymer.push(c))
         }
     });
-    Ok(Problem { polymer, pair_insertion_rules } )
+    Ok(Problem { polymer,
+                 pair_insertion_rules,
+                 calculated_pair_insertion_rules: HashMap::new() } )
 }
