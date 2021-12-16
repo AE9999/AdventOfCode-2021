@@ -10,7 +10,7 @@ fn main() -> io::Result<()> {
         let decoded = decode(x);
         let version = usize::from_str_radix(decoded[0..3].as_ref(), 2).unwrap();
         let type_id = usize::from_str_radix(decoded[3..6].as_ref(), 2).unwrap();
-        if version == 4 { decode_literal_value(decoded[6..].as_ref()) }
+        if version == 4 { decode_literal_value(decoded[6..].as_ref()); }
     });
 
     println!("{:?} do you get if you add up the version numbers in all packets?", 0);
@@ -22,8 +22,9 @@ fn decode_literal_value(decoded: &str) -> usize {
     let result: String = String::new();
     let mut offset = 0 ;
     loop {
-        if decoded[offset..offset + 1] == '1' { break }
+        let group_bit = usize::from_str_radix(decoded[offset..offset + 1].as_ref(), 10).unwrap();
         usize::from_str_radix(decoded[offset+1..offset+5].as_ref(), 2).unwrap();
+        if  group_bit == 1 { break }
         offset += 5
     }
     usize::from_str_radix(result.as_str(), 10).unwrap()
@@ -40,8 +41,8 @@ fn parse_sub_packets(decoded: &str) -> (Vec<usize>, usize) {
 }
 
 fn parse_operator_packet(decoded: &str) {
-    let length_type_id = decoded[0];
-    if length_type_id == '0' {
+    let length_type_id: usize =  usize::from_str_radix(decoded[0..1].as_ref(), 10).unwrap();
+    if length_type_id == 0 {
         let total_length_in_bits = usize::from_str_radix(decoded[1..16].as_ref(), 2).unwrap();
 
 
