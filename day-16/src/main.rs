@@ -16,6 +16,30 @@ impl Node {
                                     .map(|child| child.sum_version())
                                     .fold(0, |acc,x| acc + x)
     }
+
+    fn evaluate(&self) -> usize {
+        return match self.type_id {
+            0 => self.children.iter()
+                              .map(|child| child.evaluate())
+                              .fold(0, |acc,x| acc+x),
+            1 => self.children.iter()
+                              .map(|child| child.evaluate())
+                              .fold(1, |acc,x| acc*x),
+            2 => self.children.iter()
+                              .map(|child| child.evaluate())
+                              .min()
+                              .unwrap(),
+            3 => self.children.iter()
+                              .map(|child| child.evaluate())
+                              .max()
+                              .unwrap(),
+            4 => self.value.unwrap(),
+            5 => if self.children[0].evaluate() > self.children[1].evaluate() { 1 } else { 0 },
+            6 => if self.children[0].evaluate() < self.children[1].evaluate() { 1 } else { 0 },
+            7 => if self.children[0].evaluate() == self.children[1].evaluate() { 1 } else { 0 },
+            _ => panic!("Unexpected type")
+        }
+    }
 }
 
 fn main() -> io::Result<()> {
@@ -24,6 +48,7 @@ fn main() -> io::Result<()> {
     let line = read_lines(input).unwrap();
     let (tree, _) = parse(decode(&line).as_str());
     println!("{:?} do you get if you add up the version numbers in all packets?", tree.sum_version());
+    println!("{:?} do you get if you evaluate the expression represented by your hexadecimal-encoded BITS transmission?", tree.evaluate());
     Ok(())
 }
 
