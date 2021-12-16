@@ -14,18 +14,40 @@ fn main() -> io::Result<()> {
     });
 
     println!("{:?} do you get if you add up the version numbers in all packets?", 0);
+
+    Ok(())
 }
 
 fn decode_literal_value(decoded: &str) -> usize {
     let result: String = String::new();
     let mut offset = 0 ;
     loop {
-        if decoded[offset: offset + 1] == 1 { break }
+        if decoded[offset..offset + 1] == '1' { break }
         usize::from_str_radix(decoded[offset+1..offset+5].as_ref(), 2).unwrap();
         offset += 5
     }
     usize::from_str_radix(result.as_str(), 10).unwrap()
+}
 
+fn parse_lenght(decoded: &str) -> Vec<usize> {
+    let r : Vec<usize> = Vec::new();
+    r
+}
+
+fn parse_sub_packets(decoded: &str) -> (Vec<usize>, usize) {
+    let r : Vec<usize> = Vec::new();
+    (r, 0)
+}
+
+fn parse_operator_packet(decoded: &str) {
+    let length_type_id = decoded[0];
+    if length_type_id == '0' {
+        let total_length_in_bits = usize::from_str_radix(decoded[1..16].as_ref(), 2).unwrap();
+
+
+    } else {
+        let number_of_sub_packets = usize::from_str_radix(decoded[1..12].as_ref(), 2).unwrap();
+    }
 }
 
 fn decode(value: &String) ->  String {
