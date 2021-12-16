@@ -11,8 +11,6 @@ struct Problem {
     pair_insertion_rules: HashMap<(char, char), char>,
 
     calculated_pair_insertion_rules: HashMap<(char, char), HashMap<char, u64>>,
-
-    //calculated_pair_insertion_sub: HashMap<(char, char), Vec<char>>
 }
 
 impl Problem {
