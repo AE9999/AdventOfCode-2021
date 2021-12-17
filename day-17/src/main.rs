@@ -62,21 +62,40 @@ impl Problem {
         (hit_area, maxy, position)
     }
 
+    // 2346 too low
     fn solve_part_one(&self) -> i32 {
         (1..self.target_area.upper_right.x+2).map(|dx|{
             let mut dy = 1;
             let mut global_max_y = i32::MIN;
+
             loop {
                 let (hit, local_max_y, stop) = self.simiulate(dx, dy);
                 if hit {
                     global_max_y = max(global_max_y, local_max_y)
                 }
-                if (self.past_target_area(&stop) || self.below_targat_area(&stop)) && !hit { break }
+                //if (self.past_target_area(&stop) || self.below_targat_area(&stop)) && !hit { break }
+                if (dy > 10000) { break; } // Terrible guess
                 dy += 1;
             }
             global_max_y
         }).max().unwrap()
     }
+
+    fn solve_part_two(&self) -> i32 {
+        (1..self.target_area.upper_right.x+2).map(|dx|{
+            let mut totalhit = 0;
+            let mut dy = self.target_area.lower_left.y - 2;
+            loop {
+                let (hit, local_max_y, stop) = self.simiulate(dx, dy);
+                if hit  { totalhit  += 1 } // Terrible guess
+                if dy > 10000 { break }
+                dy += 1;
+            }
+            totalhit
+        }).fold(0, |acc,x| acc +x)
+    }
+
+
 }
 
 fn main() -> io::Result<()> {
@@ -84,6 +103,7 @@ fn main() -> io::Result<()> {
     let input = &args[1];
     let problem = read_lines(input).unwrap();
     println!("{:?} is the highest y position it reaches on this trajectory ..", problem.solve_part_one());
+    println!("{:?} distinct initial velocity values cause the probe to be within the target area after any step ..", problem.solve_part_two());
 
 
     Ok(())
