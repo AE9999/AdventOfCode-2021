@@ -2,7 +2,6 @@ use std::io::{self, BufReader, BufRead};
 use std::env;
 use std::fs::File;
 
-
 struct Node {
     version: usize,
     type_id: usize,
