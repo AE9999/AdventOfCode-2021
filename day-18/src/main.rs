@@ -9,73 +9,85 @@ use std::rc::{Rc, Weak};
 
 // Based on https://eli.thegreenplace.net/2021/rust-data-structures-with-circular-references/
 
-#[derive(Hash, Clone, Debug)]
-struct Node {
-     // I'm to stupid to learn to deal with mem pointers for now
-    id: Uuid,
-    parent: Option<Weak<RefCell<Node>>>,
-    value: Option<u32>,
-    children: Vec<Node>,
+pub struct Tree {
+    // All the nodes are owned by the `nodes` vector. Throughout the code, a
+    // NodeHandle value of 0 means "none".
+    root: NodeHandle,
+    nodes: Vec<Node>,
+    count: usize,
 }
 
-impl Node {
-    fn add_child(&mut self, mut child: Node) {
-        child.parent = self;
-        self.children.push(child);
-    }
+impl Tree {
 
-    fn is_leaf(&self) -> bool { self.value.is_some() }
-
-    fn value(&self) -> u32 {  self.value.unwrap()  }
-
-    unsafe fn add_left(&mut self, id: Uuid, value: u32) {
-        if self.children[0].id == id {
-            if self.parent != ptr::null_mut() {
-                (*self.parent).add_left(self.id, value)
-            }
-            return
+    fn update_nest_level(&mut self, node: &NodeHandle) {
+        self.nodes[*node].nest_level += 1;
+        if self.nodes[*node].left.is_some() {
+            self.update_nest_level(&(self.nodes[*node].left.unwrap()))
         }
-        self.children[0].add_value(value)
-    }
-
-    unsafe fn add_right(&mut self, id: Uuid, value: u32) {
-        if self.children[1].id == id {
-            if self.parent != ptr::null_mut() {
-                (*self.parent).add_left(self.id, value)
-            }
-            return
+        if self.nodes[*node].right.is_some() {
+            self.update_nest_level(&(self.nodes[*node].right.unwrap()))
         }
-        self.children[1].add_value(value)
     }
 
-    fn add_value(&mut self, value: u32) {
-        self.value = Option::from(self.value() + value)
+    fn alloc_node(&mut self, data: u32) -> NodeHandle {
+        let id = self.nodes.len();
+        self.nodes.push(Node {
+            id: id.clone(),
+            data: Some(data),
+            left: None,
+            right: None,
+            parent: None,
+            nest_level: 1,
+        });
+        id
     }
 
-    unsafe fn explode(&mut self) {
-        if !self.children[0].is_leaf() || !self.children[0].is_leaf() { panic!("Cannot handle this yet ..") }
-        self.parent.read_unaligned().add_left(self.id,self.children[0].value());
-        self.parent.read_unaligned().add_right(self.id, self.children[1].value());
+    fn alloc_parent_node(&mut self, left: &NodeHandle, right: &NodeHandle) -> NodeHandle {
+        let id: NodeHandle = self.nodes.len();
+        self.nodes.push(Node {
+            id: id.clone(),
+            data: None,
+            left: Some(left.clone()),
+            right: Some(right.clone()),
+            parent: None,
+            nest_level: 0,
+        });
+        self.nodes[*left].parent = Some(id);
+        self.nodes[*right].parent = Some(id);
+        self.update_nest_level(&id);
+        id
     }
 
-    fn split(&mut self) {
+    fn explode(&mut self, node: &NodeHandle) {
+        /*self.nodes[node]
 
-        let value_left = Option::from(self.value() / 2);
-        let value_right = Option::from(self.value() - value_left.unwrap());
-        self.value = None;
-        self.children.push(Node { id: Uuid::new_v4(),
-                                        parent: &mut *self,
-                                        value: value_left,
-                                        children: Vec::new()});
-        self.children.push(Node { id: Uuid::new_v4(),
-                                        parent: &mut *self,
-                                        value: value_right,
-                                        children: Vec::new() });
-
+        self.update_left();
+        self.update_right();
+        self.nodes[node] = Node {
+            id: *node,
+            data: Some(0),
+            left: None,
+            right: None,
+            parent: None,
+            nest_level: 1,
+        }*/
     }
 
+    fn split(&mut self, node: &NodeHandle) {
+        
+    }
+}
 
+type NodeHandle = usize;
 
+#[derive(Debug)]
+struct Node {
+    id: usize,
+    data: Option<u32>,
+    left: Option<NodeHandle>,
+    right: Option<NodeHandle>,
+    parent: Option<NodeHandle>,
+    nest_level: usize,
 }
 
 fn main() -> io::Result<()> {
@@ -90,28 +102,22 @@ fn main() -> io::Result<()> {
 }
 
 fn read_lines(filename: &String) -> io::Result<Vec<Node>> {
-    let file_in = File::open(filename)?;
-    let nodes = BufReader::new(file_in).lines()
-                                             .map(|x|parse_line(x.unwrap().as_str()))
-                                             .collect();
-    Ok(nodes)
+    // let file_in = File::open(filename)?;
+    // let nodes = BufReader::new(file_in).lines()
+    //                                          .map(|x|parse_line(x.unwrap().as_str()))
+    //                                          .collect();
+    Ok(Vec::new())
 }
 
-fn parse_line(line: &str) -> Node {
-    let mut nodes: Vec<Vec<Node>> = Vec::new();
+fn parse_line(line: &str, tree: &mut Tree) -> NodeHandle {
+    let mut nodes : Vec<Vec<NodeHandle>> = Vec::new();
     for c in line.chars() {
         match c {
             '[' => {  nodes.push(Vec::new()) },
             ']' => {
                 let back = nodes.pop().unwrap();
-                let mut node = Node {
-                                   id: Uuid::new_v4(),
-                                   parent: ptr::null_mut(),
-                                   value: None,
-                                   children: Vec::new(),
-                                };
-                for child in back { node.add_child(child); }
-
+                if back.len() != 2 { panic!("We are building binary trees here") }
+                let mut node = tree.alloc_parent_node(&back[0], &back[1]);
                 if nodes.is_empty() {
                     return node;
                 } else {
@@ -119,12 +125,10 @@ fn parse_line(line: &str) -> Node {
                 }
             },
             ',' => {  /* skip */ },
-            _  => { nodes.last_mut().unwrap().push( Node {
-                    id: Uuid::new_v4(),
-                    parent: ptr::null_mut(),
-                    value: Option::from(c.to_digit(10).unwrap()),
-                    children: Vec::new(),
-            })}
+            _  => {
+                let node = tree.alloc_node (c.to_digit(10).unwrap());
+                nodes.last_mut().unwrap().push(node)
+            }
         }
     }
     panic!("Should not be reached ..");
