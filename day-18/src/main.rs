@@ -1,23 +1,15 @@
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 use std::io::{self, BufReader, BufRead};
 use std::env;
 use std::fs::File;
-use uuid::Uuid;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
-
 
 // Based on https://eli.thegreenplace.net/2021/rust-data-structures-with-circular-references/
 
-pub struct Tree {
-    // All the nodes are owned by the `nodes` vector. Throughout the code, a
-    // NodeHandle value of 0 means "none".
-    root: NodeHandle,
+pub struct TreeManager {
     nodes: Vec<Node>,
-    count: usize,
 }
 
-impl Tree {
+impl TreeManager {
 
     fn update_nest_level(&mut self, node: &NodeHandle) {
         self.nodes[*node].nest_level += 1;
@@ -58,23 +50,57 @@ impl Tree {
         id
     }
 
-    fn explode(&mut self, node: &NodeHandle) {
-        /*self.nodes[node]
+    fn explode_left(&mut self, value_left: u32, origin: &NodeHandle) {
+        loop {
+            let parent = self.nodes[*origin].parent;
+            if parent.is_none() { break }
+            if self.nodes[*origin] {}
+        }
+    }
 
-        self.update_left();
-        self.update_right();
-        self.nodes[node] = Node {
-            id: *node,
+    fn explode_right(&mut self, value_left: u32, origin: &NodeHandle) {
+
+    }
+
+    fn explode(&mut self, node_id: &NodeHandle) {
+        let nest_level = self.nodes[*node_id].nest_level;
+        if nest_level < 4 { panic!("We can only explode at 4") }
+        let value_left = self.nodes[self.nodes[*node_id].left.unwrap()].data.unwrap();
+        let value_right = self.nodes[self.nodes[*node_id].right.unwrap()].data.unwrap();
+        self.explode_left(value_left, node_id);
+        self.explode_right(value_right, node_id);
+        self.nodes[*node_id] = Node {
+            id: *node_id,
             data: Some(0),
             left: None,
             right: None,
             parent: None,
-            nest_level: 1,
-        }*/
+            nest_level: self.nodes[*node_id].nest_level, // Fix this
+        }
     }
 
-    fn split(&mut self, node: &NodeHandle) {
-        
+    fn split(&mut self, node_id: &NodeHandle) {
+        let value = self.nodes[*node_id].data.unwrap();
+        let lvalue = value / 2;
+        let rvalue =  value - lvalue;
+        let new_left = self.alloc_node(lvalue);
+        let new_right = self.alloc_node(rvalue);
+
+        self.nodes[*node_id] = Node {
+            id: *node_id,
+            data: None,
+            left: Some(new_left),
+            right: Some(new_right),
+            parent: self.nodes[*node_id].parent,
+            nest_level: self.nodes[*node_id].nest_level, // Fix this
+        }
+
+    }
+
+    fn add(&mut self, left: &NodeHandle, right: &NodeHandle) -> NodeHandle {
+        let node = self.alloc_parent_node(left, right);
+        self.update_nest_level(&node);
+        node
     }
 }
 
@@ -91,9 +117,10 @@ struct Node {
 }
 
 fn main() -> io::Result<()> {
+    let mut tree_manager = TreeManager { nodes: Vec::new() } ;
     let args: Vec<String> = env::args().collect();
     let input = &args[1];
-    let snail_fish_numbers = read_lines(input).unwrap();
+    let snail_fish_numbers = read_lines(input, &mut tree_manager).unwrap();
     for snail_fish_number in snail_fish_numbers {
         println!("Read: {:?}", snail_fish_number);
     }
@@ -101,15 +128,15 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn read_lines(filename: &String) -> io::Result<Vec<Node>> {
-    // let file_in = File::open(filename)?;
-    // let nodes = BufReader::new(file_in).lines()
-    //                                          .map(|x|parse_line(x.unwrap().as_str()))
-    //                                          .collect();
-    Ok(Vec::new())
+fn read_lines(filename: &String, tree_manager: &mut TreeManager) -> io::Result<Vec<NodeHandle>> {
+    let file_in = File::open(filename)?;
+    let nodes : Vec<NodeHandle> = BufReader::new(file_in).lines()
+                                             .map(|x|parse_line(x.unwrap().as_str(), tree_manager))
+                                             .collect();
+    Ok(nodes)
 }
 
-fn parse_line(line: &str, tree: &mut Tree) -> NodeHandle {
+fn parse_line(line: &str, tree_manager: &mut TreeManager) -> NodeHandle {
     let mut nodes : Vec<Vec<NodeHandle>> = Vec::new();
     for c in line.chars() {
         match c {
@@ -117,7 +144,7 @@ fn parse_line(line: &str, tree: &mut Tree) -> NodeHandle {
             ']' => {
                 let back = nodes.pop().unwrap();
                 if back.len() != 2 { panic!("We are building binary trees here") }
-                let mut node = tree.alloc_parent_node(&back[0], &back[1]);
+                let mut node = tree_manager.alloc_parent_node(&back[0], &back[1]);
                 if nodes.is_empty() {
                     return node;
                 } else {
@@ -126,7 +153,7 @@ fn parse_line(line: &str, tree: &mut Tree) -> NodeHandle {
             },
             ',' => {  /* skip */ },
             _  => {
-                let node = tree.alloc_node (c.to_digit(10).unwrap());
+                let node = tree_manager.alloc_node (c.to_digit(10).unwrap());
                 nodes.last_mut().unwrap().push(node)
             }
         }
