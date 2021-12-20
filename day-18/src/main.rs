@@ -14,6 +14,7 @@ impl TreeManager {
     fn traverse(&mut self, root: NodeHandle) -> bool {
         let mut seen: HashSet<NodeHandle> = HashSet::new();
         let mut stack: Vec<NodeHandle> = Vec::new();
+        let mut to_split: Option<NodeHandle> = None;
         stack.push(root);
         while !(stack.is_empty()) {
             let root = stack.pop().unwrap();
@@ -22,8 +23,7 @@ impl TreeManager {
 
                 if self.is_leaf(root) {
                     if self.get_leaf_value(root) >= 10 {
-                        self.split(root);
-                        return false;
+                        if to_split.is_none() { to_split = Some(root) }
                     }
                 } else {
                     if self.nest_level(root) >= 4
@@ -36,6 +36,10 @@ impl TreeManager {
                     stack.push(self.get_left(root));
                 }
             }
+        }
+        if to_split.is_some() {
+            self.split(to_split.unwrap());
+            return false;
         }
         return true;
     }
@@ -95,16 +99,12 @@ impl TreeManager {
     }
 
     fn nest_level(&self, node: NodeHandle) -> usize {
-        self.nodes[node].nest_level
-    }
-
-    fn update_nest_level(&mut self, node: &NodeHandle) {
-        self.nodes[*node].nest_level += 1;
-        if self.nodes[*node].left.is_some() {
-            self.update_nest_level(&(self.nodes[*node].left.unwrap()))
-        }
-        if self.nodes[*node].right.is_some() {
-            self.update_nest_level(&(self.nodes[*node].right.unwrap()))
+        let mut level = 0;
+        let mut node_ = node;
+        loop {
+            if self.parent(node_).is_none() { return level }
+            level += 1;
+            node_ = self.parent(node_).unwrap();
         }
     }
 
@@ -116,7 +116,6 @@ impl TreeManager {
             left: None,
             right: None,
             parent: None,
-            nest_level: 1,
         });
         id
     }
@@ -129,11 +128,9 @@ impl TreeManager {
             left: Some(left.clone()),
             right: Some(right.clone()),
             parent: None,
-            nest_level: 0,
         });
         self.nodes[left].parent = Some(id);
         self.nodes[right].parent = Some(id);
-        self.update_nest_level(&id);
         id
     }
 
@@ -180,8 +177,6 @@ impl TreeManager {
     }
 
     fn explode(&mut self, node_id: NodeHandle) {
-        let nest_level = self.nodes[node_id].nest_level;
-        if nest_level < 4 { panic!("We can only explode at 4") }
         let value_left = self.nodes[self.nodes[node_id].left.unwrap()].data.unwrap();
         let value_right = self.nodes[self.nodes[node_id].right.unwrap()].data.unwrap();
         self.explode_left(value_left, node_id);
@@ -192,7 +187,6 @@ impl TreeManager {
             left: None,
             right: None,
             parent: None,
-            nest_level: self.nodes[node_id].nest_level, // Fix this
         }
     }
 
@@ -209,18 +203,11 @@ impl TreeManager {
             left: Some(new_left),
             right: Some(new_right),
             parent: self.nodes[node_id].parent,
-            nest_level: self.nodes[node_id].nest_level, // Fix this
         }
     }
 
     fn add(&mut self, left: NodeHandle, right: NodeHandle) -> NodeHandle {
-        self.print(left);
-        self.print(right);
-
         let node = self.alloc_parent_node(left, right);
-
-        self.update_nest_level(&node);
-        self.print(node);
         loop {
             if self.traverse(node) { break; }
         }
@@ -237,7 +224,6 @@ struct Node {
     left: Option<NodeHandle>,
     right: Option<NodeHandle>,
     parent: Option<NodeHandle>,
-    nest_level: usize,
 }
 
 fn main() -> io::Result<()> {
@@ -246,12 +232,11 @@ fn main() -> io::Result<()> {
     let input = &args[1];
     let snail_fish_numbers = read_lines(input, &mut tree_manager).unwrap();
     let mut root = snail_fish_numbers[0];
-    tree_manager.print(root);
     for i in 1..snail_fish_numbers.len() {
         root = tree_manager.add(root, snail_fish_numbers[i]);
-        tree_manager.print(root);
-    }
 
+    }
+    tree_manager.print(root);
     println!("{:?} is the magnitude of the final sum ..", tree_manager.magnitude(root));
     Ok(())
 }
