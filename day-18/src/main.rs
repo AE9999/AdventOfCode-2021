@@ -29,7 +29,6 @@ impl TreeManager {
                     if self.nest_level(root) >= 4
                        && self.is_leaf(self.get_left(root))
                        && self.is_leaf(self.get_right(root)) {
-                        println!("We have to explode ..");
                         self.explode(root);
                         return false;
                     }
@@ -39,7 +38,6 @@ impl TreeManager {
             }
         }
         if to_split.is_some() {
-            println!("We still have to split ..");
             self.split(to_split.unwrap());
             return false;
         }
@@ -205,16 +203,16 @@ impl TreeManager {
             left: Some(new_left),
             right: Some(new_right),
             parent: self.nodes[node_id].parent,
-        }
+        };
+        self.nodes[new_left].parent = Some(node_id);
+        self.nodes[new_right].parent = Some(node_id);
     }
 
     fn add(&mut self, left: NodeHandle, right: NodeHandle) -> NodeHandle {
         let node = self.alloc_parent_node(left, right);
         loop {
             if self.traverse(node) { break; }
-            self.print(node);
         }
-        self.print(node);
         node
     }
 }
@@ -236,11 +234,27 @@ fn main() -> io::Result<()> {
     let input = &args[1];
     let snail_fish_numbers = read_lines(input, &mut tree_manager).unwrap();
     let mut root = snail_fish_numbers[0];
-    for i in 1..snail_fish_numbers.len() {
-        root = tree_manager.add(root, snail_fish_numbers[i]);
-    }
-    tree_manager.print(root);
-    println!("{:?} is the magnitude of the final sum ..", tree_manager.magnitude(root));
+        for i in 1..snail_fish_numbers.len() {
+            root = tree_manager.add(root, snail_fish_numbers[i]);
+        }
+        tree_manager.print(root);
+        println!("{:?} is the magnitude of the final sum ..", tree_manager.magnitude(root));
+
+    // Yeah fuck it, I made the original problem mutable so I have to reload every thing everytime
+    // here. Once I know proper rust I'll improve
+    let len = snail_fish_numbers.len();
+    let answer = (0..len).map(|i|
+        {
+            (0..len).filter(|j| i != *j)
+                                         .map(|j| {
+                                             let mut tree_manager_ = TreeManager { nodes: Vec::new() } ;
+                                             let snail_fish_numbers_ = read_lines(input, &mut tree_manager_).unwrap();
+                                             let root = tree_manager_.add(snail_fish_numbers_[i], snail_fish_numbers_[j]);
+                                             tree_manager_.magnitude(root)
+                                         }).max().unwrap()
+    }).max().unwrap();
+    println!("{:?} is the largest magnitude of any sum of two different snailfish numbers from the homework assignment", answer);
+
     Ok(())
 }
 
