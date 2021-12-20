@@ -64,6 +64,7 @@ fn main() -> io::Result<()> {
 }
 
 fn read_lines(filename: &String,) -> io::Result<Problem> {
+    println!("Opening {:?}", filename);
     let file_in = File::open(filename)?;
     let mut scanners: Vec<Scanner> = Vec::new();
     let mut positions: Vec<Point> = Vec::new();
