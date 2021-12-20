@@ -1,4 +1,5 @@
 use std::borrow::{Borrow, BorrowMut};
+use std::collections::HashSet;
 use std::io::{self, BufReader, BufRead};
 use std::env;
 use std::fs::File;
@@ -10,6 +11,68 @@ pub struct TreeManager {
 }
 
 impl TreeManager {
+
+    fn traverse(&mut self, root: NodeHandle) -> bool {
+        let mut seen: HashSet<NodeHandle> = HashSet::new();
+        let mut stack: Vec<NodeHandle> = Vec::new();
+        stack.push(root);
+        while !(stack.is_empty()) {
+            let root = stack.pop().unwrap();
+            if !seen.contains(&root) {
+                seen.insert(root);
+
+                if self.is_leaf(root) {
+                    if self.get_leaf_value(root) >= 10 {
+                        self.split(root);
+                        return false;
+                    }
+                } else {
+                    if self.nest_level(root) >= 4
+                       && self.is_leaf(self.get_left(root))
+                       && self.is_leaf(self.get_right(root)) {
+                        self.explode(root);
+                        return false;
+                    }
+                    stack.push(self.get_right(root));
+                    stack.push(self.get_left(root));
+                }
+            }
+        }
+        return true;
+    }
+
+    fn magnitude(&self, node: NodeHandle) -> u32 {
+        if self.is_leaf(node) {
+            self.get_leaf_value(node)
+        } else {
+            (3 * self.magnitude(self.get_left(node)))
+            + (2 * self.magnitude(self.get_right(node)))
+        }
+    }
+
+    fn parent(&self, node: NodeHandle) -> Option<NodeHandle> {
+        self.nodes[node].parent
+    }
+
+    fn get_left(&self, node: NodeHandle) -> NodeHandle {
+        self.nodes[node].left.unwrap()
+    }
+
+    fn get_right(&self, node: NodeHandle) -> NodeHandle {
+        self.nodes[node].right.unwrap()
+    }
+
+    fn is_leaf(&self, node: NodeHandle) -> bool {
+        self.nodes[node].data.is_some()
+    }
+
+    fn get_leaf_value(&self, node: NodeHandle) -> u32 {
+        self.nodes[node].data.unwrap()
+    }
+
+    fn nest_level(&self, node: NodeHandle) -> usize {
+        self.nodes[node].nest_level
+    }
 
     fn update_nest_level(&mut self, node: &NodeHandle) {
         self.nodes[*node].nest_level += 1;
@@ -50,56 +113,88 @@ impl TreeManager {
         id
     }
 
-    fn explode_left(&mut self, value_left: u32, origin: &NodeHandle) {
+    fn explode_left(&mut self, value_left: u32, mut origin: NodeHandle) {
         loop {
-            let parent = self.nodes[*origin].parent;
-            if parent.is_none() { break }
-            if self.nodes[*origin] {}
+            let parent = self.parent(origin);
+            if parent.is_none() { return } // no value to add
+            let parent = parent.unwrap();
+            let mut potential = self.get_left(parent);
+            if  potential != origin {
+                loop {
+                    if self.is_leaf(potential) {
+                        self.nodes[potential].data = Some(self.nodes[potential].data.unwrap() + value_left);
+                        break;
+                    }
+                    potential = self.get_right(potential); // Search right in the tree
+                }
+                break;
+            } else {
+                origin = parent;
+            }
         }
     }
 
-    fn explode_right(&mut self, value_left: u32, origin: &NodeHandle) {
-
+    fn explode_right(&mut self, value_left: u32, mut origin: NodeHandle) {
+        loop {
+            let parent = self.parent(origin);
+            if parent.is_none() { return } // no value to add
+            let parent = parent.unwrap();
+            let mut potential = self.get_right(parent);
+            if  potential != origin {
+                loop {
+                    if self.is_leaf(potential) {
+                        self.nodes[potential].data = Some(self.nodes[potential].data.unwrap() + value_left);
+                        break;
+                    }
+                    potential = self.get_left(potential); // Search left in the tree
+                }
+                break;
+            } else {
+                origin = parent;
+            }
+        }
     }
 
-    fn explode(&mut self, node_id: &NodeHandle) {
-        let nest_level = self.nodes[*node_id].nest_level;
+    fn explode(&mut self, node_id: NodeHandle) {
+        let nest_level = self.nodes[node_id].nest_level;
         if nest_level < 4 { panic!("We can only explode at 4") }
-        let value_left = self.nodes[self.nodes[*node_id].left.unwrap()].data.unwrap();
-        let value_right = self.nodes[self.nodes[*node_id].right.unwrap()].data.unwrap();
+        let value_left = self.nodes[self.nodes[node_id].left.unwrap()].data.unwrap();
+        let value_right = self.nodes[self.nodes[node_id].right.unwrap()].data.unwrap();
         self.explode_left(value_left, node_id);
         self.explode_right(value_right, node_id);
-        self.nodes[*node_id] = Node {
-            id: *node_id,
+        self.nodes[node_id] = Node {
+            id: node_id,
             data: Some(0),
             left: None,
             right: None,
             parent: None,
-            nest_level: self.nodes[*node_id].nest_level, // Fix this
+            nest_level: self.nodes[node_id].nest_level, // Fix this
         }
     }
 
-    fn split(&mut self, node_id: &NodeHandle) {
-        let value = self.nodes[*node_id].data.unwrap();
+    fn split(&mut self, node_id: NodeHandle) {
+        let value = self.nodes[node_id].data.unwrap();
         let lvalue = value / 2;
         let rvalue =  value - lvalue;
         let new_left = self.alloc_node(lvalue);
         let new_right = self.alloc_node(rvalue);
 
-        self.nodes[*node_id] = Node {
-            id: *node_id,
+        self.nodes[node_id] = Node {
+            id: node_id,
             data: None,
             left: Some(new_left),
             right: Some(new_right),
-            parent: self.nodes[*node_id].parent,
-            nest_level: self.nodes[*node_id].nest_level, // Fix this
+            parent: self.nodes[node_id].parent,
+            nest_level: self.nodes[node_id].nest_level, // Fix this
         }
-
     }
 
     fn add(&mut self, left: &NodeHandle, right: &NodeHandle) -> NodeHandle {
         let node = self.alloc_parent_node(left, right);
         self.update_nest_level(&node);
+        loop {
+            if self.traverse(node) { break; }
+        }
         node
     }
 }
