@@ -1,4 +1,3 @@
-use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashSet;
 use std::io::{self, BufReader, BufRead};
 use std::env;
@@ -39,6 +38,31 @@ impl TreeManager {
             }
         }
         return true;
+    }
+
+    fn print(&mut self, root: NodeHandle) {
+        let mut seen: HashSet<NodeHandle> = HashSet::new();
+        let mut stack: Vec<(NodeHandle, i32)> = Vec::new();
+        stack.push((root, 0));
+        while !(stack.is_empty()) {
+            let (root, t) = stack.pop().unwrap();
+            if !seen.contains(&root) {
+                seen.insert(root);
+
+                if self.is_leaf(root) {
+                    print!("{:?}", self.get_leaf_value(root));
+                    if t == 1 { print!(",") }
+                } else {
+                    print!("[");
+                    stack.push((root, 0));
+                    stack.push((self.get_right(root), 2));
+                    stack.push((self.get_left(root), 1));
+                }
+            } else if !(self.is_leaf(root)) {
+                print!("],");
+            }
+        }
+        print!("\n");
     }
 
     fn magnitude(&self, node: NodeHandle) -> u32 {
@@ -97,7 +121,7 @@ impl TreeManager {
         id
     }
 
-    fn alloc_parent_node(&mut self, left: &NodeHandle, right: &NodeHandle) -> NodeHandle {
+    fn alloc_parent_node(&mut self, left: NodeHandle, right: NodeHandle) -> NodeHandle {
         let id: NodeHandle = self.nodes.len();
         self.nodes.push(Node {
             id: id.clone(),
@@ -107,8 +131,8 @@ impl TreeManager {
             parent: None,
             nest_level: 0,
         });
-        self.nodes[*left].parent = Some(id);
-        self.nodes[*right].parent = Some(id);
+        self.nodes[left].parent = Some(id);
+        self.nodes[right].parent = Some(id);
         self.update_nest_level(&id);
         id
     }
@@ -189,9 +213,14 @@ impl TreeManager {
         }
     }
 
-    fn add(&mut self, left: &NodeHandle, right: &NodeHandle) -> NodeHandle {
+    fn add(&mut self, left: NodeHandle, right: NodeHandle) -> NodeHandle {
+        self.print(left);
+        self.print(right);
+
         let node = self.alloc_parent_node(left, right);
+
         self.update_nest_level(&node);
+        self.print(node);
         loop {
             if self.traverse(node) { break; }
         }
@@ -216,10 +245,14 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let input = &args[1];
     let snail_fish_numbers = read_lines(input, &mut tree_manager).unwrap();
-    for snail_fish_number in snail_fish_numbers {
-        println!("Read: {:?}", snail_fish_number);
+    let mut root = snail_fish_numbers[0];
+    tree_manager.print(root);
+    for i in 1..snail_fish_numbers.len() {
+        root = tree_manager.add(root, snail_fish_numbers[i]);
+        tree_manager.print(root);
     }
-    println!("{:?} is the magnitude of the final sum ..", 0);
+
+    println!("{:?} is the magnitude of the final sum ..", tree_manager.magnitude(root));
     Ok(())
 }
 
@@ -239,7 +272,7 @@ fn parse_line(line: &str, tree_manager: &mut TreeManager) -> NodeHandle {
             ']' => {
                 let back = nodes.pop().unwrap();
                 if back.len() != 2 { panic!("We are building binary trees here") }
-                let mut node = tree_manager.alloc_parent_node(&back[0], &back[1]);
+                let node = tree_manager.alloc_parent_node(back[0], back[1]);
                 if nodes.is_empty() {
                     return node;
                 } else {
