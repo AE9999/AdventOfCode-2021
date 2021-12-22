@@ -72,6 +72,12 @@ impl Problem {
                     for covered_region in &covered_regions {
                         if !covered_region.intersects(&candidate_box) { continue }
                         let mut newly_covered_regions = candidate_box.uncovered_areas(covered_region);
+
+                        if (Problem::regions2size(&newly_covered_regions) + covered_region.region()
+                           != candidate_box.region()) {
+                            panic!("You still can't program boy ..");
+                        }
+
                         stack.append(newly_covered_regions.as_mut());
                         subsumed = true;
                         break;
