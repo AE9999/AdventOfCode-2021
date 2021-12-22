@@ -39,31 +39,19 @@ impl Problem {
         covered_regions.iter().map(|region|region.region()).fold(0, |acc, x|acc+x)
     }
 
-    fn check_covered_stuff(stuff: &Vec<Box>) {
-        (0..stuff.len()).for_each(|i|{
-            (i+1..stuff.len()).for_each( |j|{
-                if stuff[i].intersects(&(stuff[j])) {
-                    panic!("You can't program boy {:?} and {:?} intersect ", stuff[i], stuff[j]);
-                }
-            })
-        });
-    }
-
     fn solve_2(&self) -> u64 {
         let mut covered_regions: Vec<Box> = Vec::new();
 
         self.instructions.iter().for_each(|instruction| {
 
             let mut covered_regions_: Vec<Box> = Vec::new();
-
             if instruction.on {
                 // We are going to keep all original on areas and add unique uncovered ones
                 for covered_region in &covered_regions {
                     covered_regions_.push(covered_region.clone());
                 }
-                Problem::check_covered_stuff(&covered_regions_);
 
-                // Calculate all oncovered areas and add them
+                // Calculate all uncovered areas and add them
                 let mut stack: Vec<Box> = Vec::new();
                 stack.push(instruction.to_box());
                 while !(stack.is_empty()) {
@@ -72,12 +60,6 @@ impl Problem {
                     for covered_region in &covered_regions {
                         if !covered_region.intersects(&candidate_box) { continue }
                         let mut newly_covered_regions = candidate_box.uncovered_areas(covered_region);
-
-                        if (Problem::regions2size(&newly_covered_regions) + covered_region.region()
-                           != candidate_box.region()) {
-                            panic!("You still can't program boy ..");
-                        }
-
                         stack.append(newly_covered_regions.as_mut());
                         subsumed = true;
                         break;
@@ -90,26 +72,16 @@ impl Problem {
             } else {
                 // We are going to split all regions into unique ..
                 let off_box = instruction.to_box();
-                // println!("Doing a substraction of {:?} with size {:?}", off_box, off_box.region());
                 for on_region in &covered_regions {
                     if !on_region.intersects(&off_box) {
-                        // println!("{:?} does not intersect with {:?} just adding it", on_region, off_box);
                         covered_regions_.push(on_region.clone());
-                        Problem::check_covered_stuff(&covered_regions_);
                     } else {
                         let intersection = on_region.intersection(&off_box); // Dumb coding.
                         let mut still_covered_areas = on_region.minus(&intersection);
-                        /* println!("{:?} (s:{:?}) did intersect with {:?}, resulting in {:?} with size {:?}", on_region,
-                                                                                    on_region.region(),
-                                                                                    off_box,
-                                                                                    still_covered_areas,
-                                                                                    Problem::regions2size(&still_covered_areas));*/
                         covered_regions_.append(still_covered_areas.as_mut());
-                        Problem::check_covered_stuff(&covered_regions_);
                     }
                 }
             }
-            Problem::check_covered_stuff(&covered_regions_);
             covered_regions = covered_regions_;
         });
 
@@ -199,7 +171,6 @@ impl Box {
         let to_the_left_x = self.x_range.start..other.x_range.start;
         if !to_the_left_x.is_empty() {
             let to_push = Box::new(to_the_left_x, self.y_range.clone(), self.z_range.clone());
-            // println!("Pushing front {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push);
         }
 
@@ -207,7 +178,6 @@ impl Box {
         let to_the_right_x = other.x_range.end..self.x_range.end;
         if !(to_the_right_x.is_empty()) {
             let to_push = Box::new(to_the_right_x, self.y_range.clone(), self.z_range.clone());
-            // println!("Pushing back {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push)
         }
 
@@ -215,7 +185,6 @@ impl Box {
         let below_y_range = self.y_range.start..other.y_range.start;
         if !(below_y_range.is_empty()) {
             let to_push = Box::new(other.x_range.clone(), below_y_range, self.z_range.clone());
-            // println!("Pushing below {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push)
         }
 
@@ -223,17 +192,15 @@ impl Box {
         let above_y_range = other.y_range.end..self.y_range.end;
         if !(above_y_range.is_empty()) {
             let to_push = Box::new(other.x_range.clone(), above_y_range, self.z_range.clone());
-            // println!("Pushing above {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push)
         }
 
-        // AE: Left and right might be swapped here I'm to druk to care and I can't think in more than 2 dimensions anyway
+        // AE: Left and right might be swapped here I'm to drunk to care and I can't think in more than 2 dimensions anyway
 
         // Everything to the left,
         let left_z_range = self.z_range.start..other.z_range.start;
         if !(left_z_range.is_empty()) {
             let to_push = Box::new(other.x_range.clone(), other.y_range.clone(), left_z_range);
-            // println!("Pushing left {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push)
         }
 
@@ -241,12 +208,9 @@ impl Box {
         let right_z_range = other.z_range.end..self.z_range.end;
         if !(right_z_range.is_empty()) {
             let to_push = Box::new(other.x_range.clone(), other.y_range.clone(), right_z_range);
-            // println!("Pushing right {:?}: s:{:?} ..", to_push, to_push.region());
             answer.push(to_push)
         }
-
         answer
-
     }
 
     fn region(&self) -> u64 {
