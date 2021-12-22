@@ -1,7 +1,12 @@
+use std::collections::HashMap;
 use std::io::{self, BufReader, BufRead};
 use std::env;
 use std::fs::File;
 use regex::Regex;
+
+type PathLenght = u32;
+
+type PathAmount = u32;
 
 struct Problem {
     starting_position_1: u32,
@@ -32,27 +37,88 @@ impl Problem {
         loop {
 
             let values_1 =  (0..3).map(|i| 1 + ((die_offset + i) % 100) ).fold(0, |acc,x| acc +x) as u32;
-            die_roles += 1;
+            die_roles += 3;
             die_offset += 3;
             positions[0] = Problem::normalize((positions[0] + (values_1 % 10)));
             scores[0] += (positions[0] as u64);
-            println!("Player 1 roles {:?} and moves to space {:?} for a total score of {:?}.", values_1, positions[0], scores[0]);
             if scores[0] >= 1000 {
                 return scores[1] *  die_roles
             }
 
             let values_2 =  (0..3).map(|i| 1 + ((die_offset + i) % 100) ).fold(0, |acc,x| acc +x) as u32;
-            die_roles += 1;
+            die_roles += 3;
             die_offset += 3;
             positions[1] = Problem::normalize(positions[1] + (values_2 % 10));
             scores[1] += (positions[1]  as u64);
-            println!("Player 2 roles {:?} moves to space {:?} for a total score of {:?}.", values_2, positions[1], scores[1]);
             if scores[1] >= 1000 {
                 return scores[0] *  die_roles
             }
-
-            // if die_roles > 8 { return 0 }
         }
+    }
+
+    fn calculate_endpoints(&self, position: u32, current_steps: u32, current_score: u64) -> HashMap<PathLenght,
+                                                                                                    PathAmount> {
+        let mut rvalue: HashMap<u32, u32> =  HashMap::new();
+        let current_steps_ = current_steps + 1;
+
+        // take one,
+        let position_ = Problem::normalize((position + 1));
+        let current_score_ =  current_score + (position_  as u64);
+
+        if current_score_ >= 21 {
+           *rvalue.entry(current_steps_).or_insert(0) += 1;
+        } else {
+            let sub_problem = self.calculate_endpoints(position_, current_steps_, current_score_);
+            sub_problem.iter().for_each(|(k,v)|
+                *rvalue.entry( *k).or_insert(0) += v
+            )
+        }
+
+        // take two
+        let position_ = Problem::normalize((position + 2));
+        let current_score_ =  current_score + (position_  as u64);
+        if current_score_ >= 21 {
+            *rvalue.entry(current_steps_).or_insert(0) += 1;
+        } else {
+            let sub_problem = self.calculate_endpoints(position_, current_steps_, current_score_);
+            sub_problem.iter().for_each(|(k,v)|
+                *rvalue.entry( *k).or_insert(0) += v
+            )
+        }
+
+        // take three
+        let position_ = Problem::normalize((position + 3));
+        let current_score_ =  current_score + (position_  as u64);
+        if current_score_ >= 21 {
+            *rvalue.entry(current_steps_).or_insert(0) += 1;
+        } else {
+            let sub_problem = self.calculate_endpoints(position_, current_steps_, current_score_);
+            sub_problem.iter().for_each(|(k,v)|
+                *rvalue.entry( *k).or_insert(0) += v
+            )
+        }
+        rvalue
+    }
+
+    fn play_2(&self) -> u64 {
+        // So what are all the lenghts of all the paths that lead to victory per player
+
+        let completing_one_games = self.calculate_endpoints(self.starting_position_1, 0, 0);
+        println!("{:?}", completing_one_games);
+        let completing_two_games = self.calculate_endpoints(self.starting_position_2, 0, 0);
+        println!("{:?}", completing_two_games);
+
+        let winning_games_one = completing_one_games.iter().map(|(k,v)|{
+            let games_beat = completing_two_games.iter()
+                                                    .filter(|(k2,v2)| k <= k2)
+                                                    .map(|(k2,v2)| v2)
+                                                    .fold(0, |acc,x|acc+x);
+            games_beat * v // The amount off posibilties is the
+        }).fold(0,|acc,x| acc+x);
+        println!("Winning games one: {:?}", winning_games_one);
+
+
+        0
     }
 }
 
@@ -62,6 +128,8 @@ fn main() -> io::Result<()> {
     let answer = problem.play_1();
     println!("{:?} do you get if you multiply the score of the losing player by the number of times the die was rolled during the game?",
              answer);
+    let answer = problem.play_2();
+
     Ok(())
 }
 
