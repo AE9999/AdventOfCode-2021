@@ -239,8 +239,7 @@ fn range_differences(total: &Range<i32>, strip:  &Range<i32>) -> Vec<Range<i32>>
 }
 
 fn range_intersects(left: &Range<i32>, right: &Range<i32>) -> bool {
-    left.contains(&(right.end - 1)) || left.contains(&right.start)
-    || right.contains( &(left.end -1)) || right.contains(&left.start)
+    !range_intersection(left, right).is_empty()
 }
 
 fn main() -> io::Result<()> {
