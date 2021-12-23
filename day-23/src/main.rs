@@ -117,7 +117,7 @@ impl State {
         deque.push_back((*origin, 0));
         while !deque.is_empty() {
             let (destination, steps) = deque.pop_front().unwrap();
-            if !seen.contains(&point) {
+            if !seen.contains(&destination) {
                 seen.insert(destination);
 
                 if self.is_wall(&destination) // can't walk through walls
@@ -133,7 +133,7 @@ impl State {
                      || (destination == *origin) // We can't make a move of size 0
                 ){
                     // Add as a possible endpoint
-                    rvalue.push(Move::new(origin, &destination, C_2_ENERGY.get(c).unwrap() *steps))
+                    rvalue.push(Move::new(origin, &destination, C_2_ENERGY.get(&amphod).unwrap() *steps))
                 }
 
                 // Look for more moves
