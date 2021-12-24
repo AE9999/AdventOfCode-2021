@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::borrow::BorrowMut;
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -5,6 +6,7 @@ use std::io::{self, BufReader, BufRead};
 use std::env;
 use std::fs::File;
 use lazy_static::lazy_static; // 1.3.0
+use std::collections::BinaryHeap;
 
 lazy_static! {
     static ref C_2_ENERGY:HashMap<char, u64> = {
@@ -39,11 +41,28 @@ struct Problem {
     problem: Vec<Vec<char>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 struct State {
     problem: Vec<Vec<char>>,
     energy_cost: u64
 }
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Notice that the we flip the ordering on costs.
+        // In case of a tie we compare positions - this step is necessary
+        // to make implementations of `PartialEq` and `Ord` consistent.
+        other.energy_cost.cmp(&self.energy_cost)
+            .then_with(|| self.hashable_value().cmp(&other.hashable_value()))
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 
 #[derive(Clone, Copy, Debug)]
 struct Move {
@@ -111,8 +130,8 @@ impl State {
         let rooms = ROOMS.get(&c).unwrap();
 
         (!rooms.contains(destination))  // wrong room (unless you are currently in that room) // Fix:
-         || (!self.is_empty(&rooms[0]) && self.value(destination) != c)  // Amphipods will never move from the hallway into a room unless that room is their destination room and that room contains no amphipods which do not also have that room as their own destination.
-         || (!self.is_empty(&rooms[1]) && self.value(destination) != c)
+         || (!self.is_empty(&rooms[0]) && self.value(&rooms[0]) != c)  // Amphipods will never move from the hallway into a room unless that room is their destination room and that room contains no amphipods which do not also have that room as their own destination.
+         || (!self.is_empty(&rooms[1]) && self.value(&rooms[1]) != c)
     }
 
     fn is_immediately_outside_of_room(&self, point: &Point) -> bool {
@@ -158,7 +177,7 @@ impl State {
             let (destination, steps) = deque.pop_front().unwrap();
             if !seen.contains(&destination) {
                 seen.insert(destination);
-
+                // println!("\tConsidering {:?}", destination);
                 if self.is_wall(&destination) // can't walk through walls
                    || self.is_amphipods(&destination) // can't walk through amphods
                    || (self.is_room(&destination) && self.invalid_room_entry(&origin, &destination))
@@ -180,6 +199,7 @@ impl State {
                 )
             }
         }
+        // println!("The following moves are possible for: {:?} => {:?}", origin, rvalue);
         rvalue
     }
 
@@ -205,6 +225,7 @@ impl State {
                 }
             }
         }
+        //println!("The following moves are possible: {:?}", rvalue);
         rvalue
     }
 
@@ -226,56 +247,28 @@ impl Problem {
         }
     }
 
-    fn solve1h(&self, state: State, upper_bound: u64, hashmapDesDoods: &mut HashMap<String, u64>, depth: i32) -> u64 {
-
-        println!("depth:{:?} ub:{:?}, mapsize:{:?}, l:{:?} target:{:?} ", depth,
-                                                                   upper_bound,
-                                                                   hashmapDesDoods.len(),
-                                                                   hashmapDesDoods.get(&*state.hashable_value()),
-                                                                   state.hashable_value());
-        state.print();
-
-        if state.is_done() {
-            println!("Found a sollution of size {:?}..", state.energy_cost);
-            return state.energy_cost
-        }
-
-        if state.energy_cost >= upper_bound {
-            return upper_bound
-        }
-
-        let mut best_result = upper_bound;
-        let possible_moves = state.possible_moves();
-        for possible_move in possible_moves {
-            let mut next_state = state.clone();
-            next_state.perform_move(possible_move);
-
-            if !hashmapDesDoods.contains_key(&next_state.hashable_value()) {
-                hashmapDesDoods.insert(next_state.hashable_value(), next_state.energy_cost);
-            } else {
-                let other_attempt = hashmapDesDoods.get(&next_state.hashable_value()).unwrap();
-                if *other_attempt <= next_state.energy_cost {
-                    continue;
-                } // let's not bother
-                else {
-                    hashmapDesDoods.insert(next_state.hashable_value(), next_state.energy_cost);
-                }
-            }
-
-            best_result = min(best_result, self.solve1h(next_state, best_result, hashmapDesDoods, depth +1))
-        }
-
-        best_result
-    }
-
+    // Yeah fuck it why not use Dijkstra?
     fn solve1(&self) -> u64 {
-        let mut hashMapDesDoods: HashMap<String, u64> = HashMap::new();
-        let depth = 0;
-        self.solve1h(State::new(self.problem.clone(),
-                                   0),
-                                  u64::MAX,
-                              hashMapDesDoods.borrow_mut(),
-                                depth)
+
+        let mut heap : BinaryHeap<State> = BinaryHeap::new();
+        let mut dist: HashMap<Vec<Vec<char>>, u64> = HashMap::new();
+        heap.push(State::new(self.problem.clone(), 0) );
+        while let state = heap.pop().unwrap() {
+            // state.print();
+            if state.is_done() { return state.energy_cost }
+            if state.energy_cost > *(dist.get(&state.problem).unwrap_or(&u64::MAX)) { continue; }
+            for possible_move in state.possible_moves() {
+                let mut next_state = state.clone();
+                next_state.perform_move(possible_move);
+
+                if next_state.energy_cost < *(dist.get(&next_state.problem).unwrap_or(&u64::MAX)) {
+                    dist.insert(next_state.problem.clone(), next_state.energy_cost.clone());
+                    heap.push(next_state);
+                }
+
+            }
+        }
+        panic!("End state should be reachable");
     }
 }
 
