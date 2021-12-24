@@ -19,16 +19,28 @@ lazy_static! {
     };
 }
 
+// lazy_static! {
+//     static ref ROOMS: HashMap<char, [Point;2]> = {
+//         let mut map: HashMap<char, [Point;2]> = HashMap::new();
+//         map.insert('A', [Point::new(3,2), Point::new(3,3)]);
+//         map.insert('B', [Point::new(5,2), Point::new(5,3)]);
+//         map.insert('C', [Point::new(7,2), Point::new(7,3)]);
+//         map.insert('D', [Point::new(9,2), Point::new(9,3)]);
+//         map
+//     };
+// }
+
 lazy_static! {
-    static ref ROOMS: HashMap<char, [Point;2]> = {
-        let mut map: HashMap<char, [Point;2]> = HashMap::new();
-        map.insert('A', [Point::new(3,2), Point::new(3,3)]);
-        map.insert('B', [Point::new(5,2), Point::new(5,3)]);
-        map.insert('C', [Point::new(7,2), Point::new(7,3)]);
-        map.insert('D', [Point::new(9,2), Point::new(9,3)]);
+    static ref ROOMS: HashMap<char, [Point;4]> = {
+        let mut map: HashMap<char, [Point;4]> = HashMap::new();
+        map.insert('A', [Point::new(3,2), Point::new(3,3), Point::new(3,4), Point::new(3,5)]);
+        map.insert('B', [Point::new(5,2), Point::new(5,3), Point::new(5,4), Point::new(5,5)]);
+        map.insert('C', [Point::new(7,2), Point::new(7,3), Point::new(7,4), Point::new(7,5)]);
+        map.insert('D', [Point::new(9,2), Point::new(9,3), Point::new(9,4), Point::new(9,5)]);
         map
     };
 }
+
 
 lazy_static! {
     static ref OUT_SIDE_OF_ROOMS: [Point;4] = [Point::new(3,1),
@@ -124,14 +136,13 @@ impl State {
         if !self.is_empty(destination) { panic!("Idiot can't program") }
         let c = self.value(origin);
 
-        let start = ROOMS.iter().find(|(k,v)| v.contains(origin) && v.contains(destination));
+        let start = ROOMS.iter().find(|(_k,v)| v.contains(origin) && v.contains(destination));
         if start.is_some() { return false; }
 
         let rooms = ROOMS.get(&c).unwrap();
 
-        (!rooms.contains(destination))  // wrong room (unless you are currently in that room) // Fix:
-         || (!self.is_empty(&rooms[0]) && self.value(&rooms[0]) != c)  // Amphipods will never move from the hallway into a room unless that room is their destination room and that room contains no amphipods which do not also have that room as their own destination.
-         || (!self.is_empty(&rooms[1]) && self.value(&rooms[1]) != c)
+        (!rooms.contains(destination))
+        || (0..rooms.len()).find(|i| (!self.is_empty(&rooms[*i]) && self.value(&rooms[*i]) != c)).is_some()
     }
 
     fn is_immediately_outside_of_room(&self, point: &Point) -> bool {
@@ -177,7 +188,7 @@ impl State {
             let (destination, steps) = deque.pop_front().unwrap();
             if !seen.contains(&destination) {
                 seen.insert(destination);
-                // println!("\tConsidering {:?}", destination);
+
                 if self.is_wall(&destination) // can't walk through walls
                    || self.is_amphipods(&destination) // can't walk through amphods
                    || (self.is_room(&destination) && self.invalid_room_entry(&origin, &destination))
@@ -199,7 +210,6 @@ impl State {
                 )
             }
         }
-        // println!("The following moves are possible for: {:?} => {:?}", origin, rvalue);
         rvalue
     }
 
@@ -225,7 +235,6 @@ impl State {
                 }
             }
         }
-        //println!("The following moves are possible: {:?}", rvalue);
         rvalue
     }
 
@@ -248,24 +257,39 @@ impl Problem {
     }
 
     // Yeah fuck it why not use Dijkstra?
+
+    // How do we deal with dead branches?
     fn solve1(&self) -> u64 {
 
         let mut heap : BinaryHeap<State> = BinaryHeap::new();
         let mut dist: HashMap<Vec<Vec<char>>, u64> = HashMap::new();
+        let mut terminated_states: HashSet<Vec<Vec<char>>> = HashSet::new();
+
         heap.push(State::new(self.problem.clone(), 0) );
         while let state = heap.pop().unwrap() {
             // state.print();
-            if state.is_done() { return state.energy_cost }
+            if state.is_done() {
+                return state.energy_cost
+            }
             if state.energy_cost > *(dist.get(&state.problem).unwrap_or(&u64::MAX)) { continue; }
+
+            let mut contained_possible_move = false;
+
             for possible_move in state.possible_moves() {
                 let mut next_state = state.clone();
                 next_state.perform_move(possible_move);
 
+                if terminated_states.contains(&next_state.problem) { continue }
+
                 if next_state.energy_cost < *(dist.get(&next_state.problem).unwrap_or(&u64::MAX)) {
+                    contained_possible_move = true;
                     dist.insert(next_state.problem.clone(), next_state.energy_cost.clone());
                     heap.push(next_state);
                 }
+            }
 
+            if !contained_possible_move {
+                terminated_states.insert(state.problem);
             }
         }
         panic!("End state should be reachable");
