@@ -23,8 +23,10 @@ impl Problem {
         self.cucumbers[point.y as usize][point.x as usize]
     }
 
-    fn update(&mut self, point: &Point, value: char) {
-        self.cucumbers[point.y as usize][point.x as usize] = value;
+    fn update(&mut self, my_move: &Move) {
+        let value = self.cucumbers[my_move.origin.y as usize][my_move.origin.x as usize];
+        self.cucumbers[my_move.origin.y as usize][my_move.origin.x as usize] = '.';
+        self.cucumbers[my_move.destination.y as usize][my_move.destination.x as usize] = value;
     }
 
     fn print(&self) {
@@ -35,31 +37,20 @@ impl Problem {
         println!("{:?}", String::from_iter(vec!['!'; self.width() as usize]));
     }
 
-    fn step(&mut self) -> u32 {
-        let mut points_moved: u32 = 0;
-        let mut moved: HashSet<Point> = HashSet::new();
+    fn step(&mut self) -> usize {
+        let mut points_moved: usize = 0;
+        let mut moves: Vec<Move> = Vec::new();
+
         for y in 0..self.height() {
             for x in 0..self.width() {
-                let point = Point::new(x,y);
-                match self.value(&point) {
+                let origin = Point::new(x,y);
+                match self.value(&origin) {
+                    'v' => { continue }
                     '>' => {
                         let x_ = (x + 1) % self.width();
-                        let next_point = Point::new(x_, y);
-                        if self.value(&next_point) == '.' && !moved.contains(&point) {
-                            self.update(&point, '.');
-                            self.update(&next_point, '>');
-                            moved.insert(next_point);
-                            points_moved += 1;
-                        }
-                    }
-                    'v' => {
-                        let y_ = (y + 1) % self.height();
-                        let next_point = Point::new(x, y_);
-                        if self.value(&next_point) == '.' && !moved.contains(&point) {
-                            self.update(&point, '.');
-                            self.update(&next_point, 'v');
-                            moved.insert(next_point);
-                            points_moved += 1;
+                        let destination = Point::new(x_, y);
+                        if self.value(&destination) == '.' {
+                            moves.push(Move::new(origin, destination));
                         }
                     }
                     '.' => {  continue }
@@ -67,6 +58,33 @@ impl Problem {
                 }
             }
         }
+
+        moves.iter().for_each(|my_move| self.update(my_move));
+        points_moved += moves.len();
+        moves.clear();
+
+        for y in 0..self.height() {
+            for x in 0..self.width() {
+                let origin = Point::new(x,y);
+                match self.value(&origin) {
+                    '>' => { continue }
+                    'v' => {
+                        let y_ = (y + 1) % self.height();
+                        let destination = Point::new(x, y_);
+                        if self.value(&destination) == '.' {
+                            moves.push(Move::new(origin, destination));
+                        }
+                    }
+                    '.' => {  continue }
+                    _ => panic!("")
+                }
+            }
+        }
+
+        moves.iter().for_each(|my_move| self.update(my_move));
+        points_moved += moves.len();
+        moves.clear();
+
         points_moved
     }
 }
@@ -85,15 +103,30 @@ impl Point {
 
 }
 
+struct Move {
+    origin: Point,
+    destination: Point
+}
+
+impl Move {
+    fn new(origin: Point, destination: Point) -> Move {
+        Move {
+            origin,
+            destination
+        }
+    }
+}
+
 fn main() -> io::Result<()> {
     let mut problem: Problem = read_lines(&env::args().collect::<Vec<String>>()[1]).unwrap();
     let mut steps: u32 = 0;
-    problem.print();
+    // problem.print();
     loop {
         steps += 1;
+        // println!("After step: {:?}", steps);
         let amount_moved = problem.step();
-        problem.print();
-        if amount_moved == 0 || steps > 3 { break; }
+        // problem.print();
+        if amount_moved == 0 { break; }
     }
     println!("{:?} is the first step on which no sea cucumbers move ..", steps);
     Ok(())
